@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>하루정리</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="titlebar-drag">하루정리</div>
+  <div class="content">
+    <div class="date-row">
+      <div class="date-nav">
+        <button class="nav-arrow" id="prevDayBtn" aria-label="이전 날">‹</button>
+        <div class="date-display">
+          <div class="today" id="todayLabel"></div>
+          <div class="dow" id="dowLabel"></div>
+          <input type="date" id="datePicker" class="date-picker-input" aria-label="날짜 선택" />
+        </div>
+        <button class="nav-arrow" id="nextDayBtn" aria-label="다음 날">›</button>
+      </div>
+      <div class="header-links">
+        <button class="history-link" id="todayJumpBtn" style="display:none">오늘로</button>
+        <button class="icon-btn" id="settingsBtn" title="설정">⚙</button>
+      </div>
+    </div>
+
+    <div class="progress-row">
+      <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+      <div class="progress-label" id="progressLabel">0/0 완료</div>
+    </div>
+
+    <div class="add-row">
+      <input type="text" id="taskInput" placeholder="할 일을 입력하고 Enter" maxlength="80" />
+      <button id="addBtn">추가</button>
+    </div>
+
+    <ul class="list" id="list"></ul>
+  </div>
+
+  <div class="footer">
+    <div class="hint" id="footerHint">미완료 항목이 없어요</div>
+    <button class="carry-btn" id="carryBtn">다음날로 이월하기</button>
+  </div>
+
+  <!-- 이월 확인 모달 (날짜가 바뀌었을 때) -->
+  <div class="modal-layer" id="rolloverModalLayer">
+    <div class="modal wide">
+      <div class="icon">!</div>
+      <h2 id="rolloverTitle"></h2>
+      <ul class="rollover-list" id="rolloverList"></ul>
+      <div class="sub">이 항목들을 오늘로 이월할까요?</div>
+      <div class="modal-actions">
+        <button id="rolloverNo">아니요</button>
+        <button class="primary" id="rolloverYes">예</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 설정 모달 -->
+  <div class="modal-layer" id="settingsModalLayer">
+    <div class="modal">
+      <button class="close-btn" id="settingsCloseBtn">×</button>
+      <h2>설정</h2>
+      <label class="setting-row">
+        <input type="checkbox" id="autoLaunchCheckbox" />
+        <span>Windows 시작 시 자동 실행</span>
+      </label>
+    </div>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

@@ -1,0 +1,32 @@
+{
+  "name": "day-list-app",
+  "version": "1.0.0",
+  "description": "하루 일정 정리 로컬 앱",
+  "author": "jaeuk",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "electron test/e2e.js",
+    "build": "electron-builder"
+  },
+  "devDependencies": {
+    "electron": "^32.0.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.jaeuk.daylist",
+    "productName": "하루정리",
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer/**/*"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}
