@@ -1,4 +1,5 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
+const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const fs = require('fs');
 
@@ -87,7 +88,10 @@ ipcMain.handle('set-auto-launch', (_e, enabled) => {
   return app.getLoginItemSettings().openAtLogin;
 });
 
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+  createWindow();
+  if (app.isPackaged) autoUpdater.checkForUpdatesAndNotify();
+});
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
