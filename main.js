@@ -80,6 +80,7 @@ ipcMain.handle('save-data', (_e, data) => {
   saveData(data);
   return true;
 });
+ipcMain.handle('get-app-version', () => app.getVersion());
 ipcMain.handle('get-settings', () => ({
   autoLaunch: app.getLoginItemSettings().openAtLogin,
 }));

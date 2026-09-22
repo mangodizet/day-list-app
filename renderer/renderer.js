@@ -335,5 +335,6 @@ async function init() {
   if (last && last < today) checkRollover(last);
   setLastActiveDate(today);
   render();
+  document.getElementById('appVersion').textContent = 'v' + await window.api.getAppVersion();
 }
 init();
