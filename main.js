@@ -88,25 +88,36 @@ ipcMain.handle('set-auto-launch', (_e, enabled) => {
   return app.getLoginItemSettings().openAtLogin;
 });
 
+autoUpdater.autoDownload = false;
+
 function sendUpdateStatus(status, extra) {
   if (mainWindow) mainWindow.webContents.send('update-status', { status, ...extra });
 }
 autoUpdater.on('checking-for-update', () => sendUpdateStatus('checking'));
-autoUpdater.on('update-available', (info) => sendUpdateStatus('available', { version: info.version }));
+autoUpdater.on('update-available', (info) => sendUpdateStatus('available', {
+  version: info.version,
+  releaseNotes: typeof info.releaseNotes === 'string' ? info.releaseNotes : null,
+}));
 autoUpdater.on('update-not-available', () => sendUpdateStatus('not-available'));
 autoUpdater.on('error', (err) => sendUpdateStatus('error', { message: err.message }));
+autoUpdater.on('download-progress', (p) => sendUpdateStatus('downloading', { percent: Math.round(p.percent) }));
+autoUpdater.on('update-downloaded', () => {
+  sendUpdateStatus('downloaded');
+  autoUpdater.quitAndInstall();
+});
 
 ipcMain.handle('check-for-updates', () => {
   if (!app.isPackaged) {
     sendUpdateStatus('dev-mode');
     return;
   }
-  autoUpdater.checkForUpdatesAndNotify();
+  autoUpdater.checkForUpdates();
 });
+ipcMain.handle('download-update', () => autoUpdater.downloadUpdate());
 
 app.whenReady().then(() => {
   createWindow();
-  if (app.isPackaged) autoUpdater.checkForUpdatesAndNotify();
+  if (app.isPackaged) autoUpdater.checkForUpdates();
 });
 
 app.on('window-all-closed', () => {

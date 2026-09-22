@@ -50,6 +50,12 @@ const settingsCloseBtn = document.getElementById('settingsCloseBtn');
 const autoLaunchCheckbox = document.getElementById('autoLaunchCheckbox');
 const checkUpdateBtn = document.getElementById('checkUpdateBtn');
 const updateStatus = document.getElementById('updateStatus');
+const updateModalLayer = document.getElementById('updateModalLayer');
+const updateModalTitle = document.getElementById('updateModalTitle');
+const updateModalNotes = document.getElementById('updateModalNotes');
+const updateModalSub = document.getElementById('updateModalSub');
+const updateLaterBtn = document.getElementById('updateLaterBtn');
+const updateInstallBtn = document.getElementById('updateInstallBtn');
 
 function renderDateHeader() {
   const [y, m, d] = viewDate.split('-').map(Number);
@@ -284,20 +290,43 @@ autoLaunchCheckbox.onchange = async () => {
 
 const UPDATE_STATUS_TEXT = {
   checking: '확인 중...',
-  available: (d) => `새 버전(${d.version})이 있어요, 다운로드 중...`,
+  available: (d) => `새 버전(${d.version})을 찾았어요`,
   'not-available': '최신 버전이에요',
   error: (d) => `확인 실패: ${d.message}`,
   'dev-mode': '개발 모드에서는 확인할 수 없어요',
+  downloading: (d) => `다운로드 중... ${d.percent}%`,
+  downloaded: '설치 준비 완료, 곧 재시작돼요',
 };
 checkUpdateBtn.onclick = async () => {
   checkUpdateBtn.disabled = true;
   updateStatus.textContent = '확인 중...';
   await window.api.checkForUpdates();
 };
+updateLaterBtn.onclick = () => updateModalLayer.classList.remove('show');
+updateInstallBtn.onclick = () => {
+  updateInstallBtn.disabled = true;
+  updateModalSub.textContent = '다운로드 중... 0%';
+  window.api.downloadUpdate();
+};
 window.api.onUpdateStatus((data) => {
   const text = UPDATE_STATUS_TEXT[data.status];
   updateStatus.textContent = typeof text === 'function' ? text(data) : text || '';
   if (data.status !== 'checking') checkUpdateBtn.disabled = false;
+
+  if (data.status === 'available') {
+    updateModalTitle.textContent = `새 버전 ${data.version}이 있어요`;
+    updateModalNotes.textContent = data.releaseNotes || '변경 내역이 없어요.';
+    updateModalSub.textContent = '지금 업데이트할까요?';
+    updateInstallBtn.disabled = false;
+    updateModalLayer.classList.add('show');
+  } else if (data.status === 'downloading' && updateModalLayer.classList.contains('show')) {
+    updateModalSub.textContent = `다운로드 중... ${data.percent}%`;
+  } else if (data.status === 'downloaded' && updateModalLayer.classList.contains('show')) {
+    updateModalSub.textContent = '설치 준비 완료, 곧 재시작돼요';
+  } else if (data.status === 'error' && updateModalLayer.classList.contains('show')) {
+    updateModalSub.textContent = `업데이트 실패: ${data.message}`;
+    updateInstallBtn.disabled = false;
+  }
 });
 
 async function init() {
