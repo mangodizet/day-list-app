@@ -88,6 +88,22 @@ ipcMain.handle('set-auto-launch', (_e, enabled) => {
   return app.getLoginItemSettings().openAtLogin;
 });
 
+function sendUpdateStatus(status, extra) {
+  if (mainWindow) mainWindow.webContents.send('update-status', { status, ...extra });
+}
+autoUpdater.on('checking-for-update', () => sendUpdateStatus('checking'));
+autoUpdater.on('update-available', (info) => sendUpdateStatus('available', { version: info.version }));
+autoUpdater.on('update-not-available', () => sendUpdateStatus('not-available'));
+autoUpdater.on('error', (err) => sendUpdateStatus('error', { message: err.message }));
+
+ipcMain.handle('check-for-updates', () => {
+  if (!app.isPackaged) {
+    sendUpdateStatus('dev-mode');
+    return;
+  }
+  autoUpdater.checkForUpdatesAndNotify();
+});
+
 app.whenReady().then(() => {
   createWindow();
   if (app.isPackaged) autoUpdater.checkForUpdatesAndNotify();

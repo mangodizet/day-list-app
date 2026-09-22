@@ -48,6 +48,8 @@ const settingsBtn = document.getElementById('settingsBtn');
 const settingsModalLayer = document.getElementById('settingsModalLayer');
 const settingsCloseBtn = document.getElementById('settingsCloseBtn');
 const autoLaunchCheckbox = document.getElementById('autoLaunchCheckbox');
+const checkUpdateBtn = document.getElementById('checkUpdateBtn');
+const updateStatus = document.getElementById('updateStatus');
 
 function renderDateHeader() {
   const [y, m, d] = viewDate.split('-').map(Number);
@@ -279,6 +281,24 @@ autoLaunchCheckbox.onchange = async () => {
   const actual = await window.api.setAutoLaunch(autoLaunchCheckbox.checked);
   autoLaunchCheckbox.checked = actual;
 };
+
+const UPDATE_STATUS_TEXT = {
+  checking: '확인 중...',
+  available: (d) => `새 버전(${d.version})이 있어요, 다운로드 중...`,
+  'not-available': '최신 버전이에요',
+  error: (d) => `확인 실패: ${d.message}`,
+  'dev-mode': '개발 모드에서는 확인할 수 없어요',
+};
+checkUpdateBtn.onclick = async () => {
+  checkUpdateBtn.disabled = true;
+  updateStatus.textContent = '확인 중...';
+  await window.api.checkForUpdates();
+};
+window.api.onUpdateStatus((data) => {
+  const text = UPDATE_STATUS_TEXT[data.status];
+  updateStatus.textContent = typeof text === 'function' ? text(data) : text || '';
+  if (data.status !== 'checking') checkUpdateBtn.disabled = false;
+});
 
 async function init() {
   data = await window.api.loadData();

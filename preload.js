@@ -5,4 +5,6 @@ contextBridge.exposeInMainWorld('api', {
   saveData: (data) => ipcRenderer.invoke('save-data', data),
   getSettings: () => ipcRenderer.invoke('get-settings'),
   setAutoLaunch: (enabled) => ipcRenderer.invoke('set-auto-launch', enabled),
+  checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
+  onUpdateStatus: (cb) => ipcRenderer.on('update-status', (_e, data) => cb(data)),
 });
