@@ -1,6 +1,6 @@
 {
   "name": "day-list-app",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "하루 일정 정리 로컬 앱",
   "author": "jaeuk",
   "main": "main.js",

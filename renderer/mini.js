@@ -12,6 +12,7 @@ const dateLabel = document.getElementById('miniDateLabel');
 const listEl = document.getElementById('miniList');
 const progressEl = document.getElementById('miniProgress');
 const closeBtn = document.getElementById('miniCloseBtn');
+const pinBtn = document.getElementById('miniPinBtn');
 const opacityRange = document.getElementById('miniOpacityRange');
 
 dateLabel.textContent = `${todayM}월 ${todayD}일 할 일`;
@@ -57,10 +58,17 @@ async function render() {
 
 closeBtn.onclick = () => window.api.exitMiniMode();
 opacityRange.oninput = () => window.api.setMiniOpacity(Number(opacityRange.value) / 100);
+pinBtn.onclick = async () => {
+  const next = !pinBtn.classList.contains('active');
+  await window.api.setMiniPinned(next);
+  pinBtn.classList.toggle('active', next);
+};
 window.api.onDataChanged(render);
 
 (async () => {
   const opacity = await window.api.getMiniOpacity();
   opacityRange.value = Math.round(opacity * 100);
+  const pinned = await window.api.getMiniPinned();
+  pinBtn.classList.toggle('active', pinned);
   render();
 })();

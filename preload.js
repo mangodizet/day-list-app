@@ -13,5 +13,7 @@ contextBridge.exposeInMainWorld('api', {
   exitMiniMode: () => ipcRenderer.invoke('exit-mini-mode'),
   getMiniOpacity: () => ipcRenderer.invoke('get-mini-opacity'),
   setMiniOpacity: (value) => ipcRenderer.invoke('set-mini-opacity', value),
+  getMiniPinned: () => ipcRenderer.invoke('get-mini-pinned'),
+  setMiniPinned: (pinned) => ipcRenderer.invoke('set-mini-pinned', pinned),
   onDataChanged: (cb) => ipcRenderer.on('data-changed', () => cb()),
 });
