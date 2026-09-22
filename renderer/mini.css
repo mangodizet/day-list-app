@@ -1,11 +1,9 @@
 :root {
-  --surface-sunken: #EFEBE2;
   --text: #1E2124;
   --text-soft: #6B6F76;
   --text-faint: #9B9E9F;
   --accent: #2B6E63;
   --accent-soft: #DCEAE6;
-  --border: #E2DDD1;
   --mini-alpha: 0.92;
 }
 
@@ -25,10 +23,10 @@ html, body {
   display: flex;
   flex-direction: column;
   background: rgba(255, 255, 255, var(--mini-alpha));
-  border: 1px solid var(--border);
-  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 10px;
   overflow: hidden;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.16);
 }
 
 .mini-header {
@@ -36,12 +34,11 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 6px 8px 12px;
-  background: var(--surface-sunken);
-  border-bottom: 1px solid var(--border);
+  padding: 8px 6px 6px 12px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
   -webkit-app-region: drag;
-  font-size: 12.5px;
-  font-weight: 700;
+  font-size: 12px;
+  font-weight: 600;
   color: var(--text-soft);
 }
 
@@ -62,7 +59,7 @@ html, body {
   border-radius: 6px;
   line-height: 1;
 }
-.mini-icon-btn:hover { background: var(--border); }
+.mini-icon-btn:hover { background: rgba(0, 0, 0, 0.06); }
 #miniCloseBtn { font-size: 16px; }
 
 /* 핀 버튼: 이모지 색은 CSS로 못 바꾸므로 배경/회전으로 켜짐·꺼짐을 구분 */
@@ -105,7 +102,7 @@ html, body {
   border-radius: 7px;
   cursor: pointer;
 }
-.mini-item:hover { background: var(--surface-sunken); }
+.mini-item:hover { background: rgba(0, 0, 0, 0.05); }
 
 .mini-check {
   width: 16px;
@@ -136,9 +133,8 @@ html, body {
 
 .mini-footer {
   flex: none;
-  padding: 8px 10px;
-  border-top: 1px solid var(--border);
-  background: var(--surface-sunken);
+  padding: 6px 10px 8px;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
   display: flex;
   flex-direction: column;
   gap: 6px;

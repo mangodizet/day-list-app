@@ -84,7 +84,7 @@ function createWindow() {
   mainWindow.on('move', scheduleSaveBounds);
 
   mainWindow.on('close', (e) => {
-    if (!isQuitting) {
+    if (!isQuitting && tray) {
       e.preventDefault();
       mainWindow.hide();
     }
@@ -157,7 +157,13 @@ function exitMiniMode() {
 }
 
 function createTray() {
-  tray = new Tray(path.join(__dirname, 'build', 'icon.ico'));
+  try {
+    tray = new Tray(path.join(__dirname, 'build', 'icon.ico'));
+  } catch (err) {
+    console.error('트레이 아이콘 생성 실패, 트레이 최소화를 비활성화합니다:', err);
+    tray = null;
+    return;
+  }
   tray.setToolTip('하루정리');
   tray.setContextMenu(Menu.buildFromTemplate([
     { label: '메인 창 열기', click: () => exitMiniMode() },

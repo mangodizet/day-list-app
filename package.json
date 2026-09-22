@@ -1,6 +1,6 @@
 {
   "name": "day-list-app",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "description": "하루 일정 정리 로컬 앱",
   "author": "jaeuk",
   "main": "main.js",
@@ -20,7 +20,8 @@
     "files": [
       "main.js",
       "preload.js",
-      "renderer/**/*"
+      "renderer/**/*",
+      "build/icon.ico"
     ],
     "win": {
       "target": "nsis"
