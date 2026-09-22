@@ -14,6 +14,7 @@ const progressEl = document.getElementById('miniProgress');
 const closeBtn = document.getElementById('miniCloseBtn');
 const pinBtn = document.getElementById('miniPinBtn');
 const opacityRange = document.getElementById('miniOpacityRange');
+const opacityValue = document.getElementById('miniOpacityValue');
 
 dateLabel.textContent = `${todayM}월 ${todayD}일 할 일`;
 
@@ -56,8 +57,17 @@ async function render() {
   progressEl.textContent = tasks.length ? `${done}/${tasks.length} 완료` : '';
 }
 
+function applyOpacity(percent) {
+  document.documentElement.style.setProperty('--mini-alpha', percent / 100);
+  opacityValue.textContent = `${percent}%`;
+}
+
 closeBtn.onclick = () => window.api.exitMiniMode();
-opacityRange.oninput = () => window.api.setMiniOpacity(Number(opacityRange.value) / 100);
+opacityRange.oninput = () => {
+  const percent = Number(opacityRange.value);
+  applyOpacity(percent);
+  window.api.setMiniOpacity(percent / 100);
+};
 pinBtn.onclick = async () => {
   const next = !pinBtn.classList.contains('active');
   await window.api.setMiniPinned(next);
@@ -67,7 +77,9 @@ window.api.onDataChanged(render);
 
 (async () => {
   const opacity = await window.api.getMiniOpacity();
-  opacityRange.value = Math.round(opacity * 100);
+  const percent = Math.round(opacity * 100);
+  opacityRange.value = percent;
+  applyOpacity(percent);
   const pinned = await window.api.getMiniPinned();
   pinBtn.classList.toggle('active', pinned);
   render();

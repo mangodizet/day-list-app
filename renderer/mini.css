@@ -4,7 +4,9 @@
   --text-soft: #6B6F76;
   --text-faint: #9B9E9F;
   --accent: #2B6E63;
+  --accent-soft: #DCEAE6;
   --border: #E2DDD1;
+  --mini-alpha: 0.92;
 }
 
 * { box-sizing: border-box; }
@@ -22,7 +24,7 @@ html, body {
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(255, 255, 255, var(--mini-alpha));
   border: 1px solid var(--border);
   border-radius: 12px;
   overflow: hidden;
@@ -52,18 +54,29 @@ html, body {
 .mini-icon-btn {
   -webkit-app-region: no-drag;
   background: none;
-  border: none;
+  border: 1px solid transparent;
   color: var(--text-soft);
   font-size: 14px;
   cursor: pointer;
   padding: 2px 7px;
   border-radius: 6px;
   line-height: 1;
-  opacity: 0.55;
 }
-.mini-icon-btn:hover { color: var(--text); background: var(--border); opacity: 1; }
-.mini-icon-btn.active { color: var(--accent); opacity: 1; }
+.mini-icon-btn:hover { background: var(--border); }
 #miniCloseBtn { font-size: 16px; }
+
+/* 핀 버튼: 이모지 색은 CSS로 못 바꾸므로 배경/회전으로 켜짐·꺼짐을 구분 */
+#miniPinBtn {
+  opacity: 0.45;
+  transform: rotate(45deg);
+  transition: transform 0.15s ease, background 0.15s ease, opacity 0.15s ease, border-color 0.15s ease;
+}
+#miniPinBtn.active {
+  opacity: 1;
+  transform: rotate(0deg);
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
 
 .mini-list {
   list-style: none;
@@ -149,4 +162,9 @@ html, body {
   flex: 1;
   accent-color: var(--accent);
   cursor: pointer;
+}
+.mini-opacity-value {
+  min-width: 30px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }

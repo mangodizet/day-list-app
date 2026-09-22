@@ -99,7 +99,6 @@ function createMiniWindow() {
   }
   const settings = loadSettings();
   const bounds = settings.miniBounds;
-  const opacity = typeof settings.miniOpacity === 'number' ? settings.miniOpacity : 0.92;
   const pinned = !!settings.miniPinned;
 
   miniWindow = new BrowserWindow({
@@ -113,9 +112,8 @@ function createMiniWindow() {
     transparent: true,
     resizable: true,
     alwaysOnTop: pinned,
-    skipTaskbar: true,
+    skipTaskbar: false,
     backgroundColor: '#00000000',
-    opacity,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -199,7 +197,6 @@ ipcMain.handle('get-mini-opacity', () => {
 });
 ipcMain.handle('set-mini-opacity', (_e, value) => {
   const v = Math.min(1, Math.max(0.3, Number(value) || 1));
-  if (miniWindow) miniWindow.setOpacity(v);
   const s = loadSettings();
   s.miniOpacity = v;
   saveSettings(s);
