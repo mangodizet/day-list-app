@@ -32,7 +32,8 @@
     "publish": {
       "provider": "github",
       "owner": "mangodizet",
-      "repo": "day-list-app"
+      "repo": "day-list-app",
+      "releaseType": "release"
     }
   },
   "dependencies": {
