@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>하루정리 - 미니</title>
+<link rel="stylesheet" href="mini.css" />
+</head>
+<body>
+  <div class="mini-card">
+    <div class="mini-header">
+      <span class="mini-date" id="miniDateLabel"></span>
+      <button class="mini-icon-btn" id="miniCloseBtn" title="메인 창으로 돌아가기">×</button>
+    </div>
+    <ul class="mini-list" id="miniList"></ul>
+    <div class="mini-footer">
+      <span class="mini-progress" id="miniProgress"></span>
+      <div class="mini-opacity">
+        <span>투명도</span>
+        <input type="range" id="miniOpacityRange" min="30" max="100" value="92" />
+      </div>
+    </div>
+  </div>
+  <script src="mini.js"></script>
+</body>
+</html>

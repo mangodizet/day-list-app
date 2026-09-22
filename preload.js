@@ -9,4 +9,9 @@ contextBridge.exposeInMainWorld('api', {
   checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
   downloadUpdate: () => ipcRenderer.invoke('download-update'),
   onUpdateStatus: (cb) => ipcRenderer.on('update-status', (_e, data) => cb(data)),
+  enterMiniMode: () => ipcRenderer.invoke('enter-mini-mode'),
+  exitMiniMode: () => ipcRenderer.invoke('exit-mini-mode'),
+  getMiniOpacity: () => ipcRenderer.invoke('get-mini-opacity'),
+  setMiniOpacity: (value) => ipcRenderer.invoke('set-mini-opacity', value),
+  onDataChanged: (cb) => ipcRenderer.on('data-changed', () => cb()),
 });

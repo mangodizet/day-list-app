@@ -34,6 +34,7 @@ const datePicker = document.getElementById('datePicker');
 const prevDayBtn = document.getElementById('prevDayBtn');
 const nextDayBtn = document.getElementById('nextDayBtn');
 const todayJumpBtn = document.getElementById('todayJumpBtn');
+const miniModeBtn = document.getElementById('miniModeBtn');
 const listEl = document.getElementById('list');
 const inputEl = document.getElementById('taskInput');
 const addBtn = document.getElementById('addBtn');
@@ -236,6 +237,12 @@ carryBtn.onclick = () => {
   render();
   if (n > 0) footerHint.textContent = `${n}개를 다음날로 이월했어요`;
 };
+
+miniModeBtn.onclick = () => window.api.enterMiniMode();
+window.api.onDataChanged(async () => {
+  data = await window.api.loadData();
+  render();
+});
 
 // 날짜 이동
 prevDayBtn.onclick = () => { viewDate = addDays(viewDate, -1); render(); };

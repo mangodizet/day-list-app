@@ -1,7 +1,13 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, Tray, Menu } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const fs = require('fs');
+
+const gotLock = app.requestSingleInstanceLock();
+if (!gotLock) {
+  app.quit();
+  return;
+}
 
 const dataPath = path.join(app.getPath('userData'), 'data.json');
 const settingsPath = path.join(app.getPath('userData'), 'settings.json');
@@ -31,6 +37,9 @@ function saveSettings(settings) {
 }
 
 let mainWindow;
+let miniWindow;
+let tray;
+let isQuitting = false;
 
 function createWindow() {
   const settings = loadSettings();
@@ -73,11 +82,104 @@ function createWindow() {
   }
   mainWindow.on('resize', scheduleSaveBounds);
   mainWindow.on('move', scheduleSaveBounds);
+
+  mainWindow.on('close', (e) => {
+    if (!isQuitting) {
+      e.preventDefault();
+      mainWindow.hide();
+    }
+  });
+}
+
+function createMiniWindow() {
+  if (miniWindow) {
+    miniWindow.show();
+    miniWindow.focus();
+    return;
+  }
+  const settings = loadSettings();
+  const bounds = settings.miniBounds;
+  const opacity = typeof settings.miniOpacity === 'number' ? settings.miniOpacity : 0.92;
+
+  miniWindow = new BrowserWindow({
+    width: bounds ? bounds.width : 260,
+    height: bounds ? bounds.height : 340,
+    x: bounds ? bounds.x : undefined,
+    y: bounds ? bounds.y : undefined,
+    minWidth: 200,
+    minHeight: 220,
+    frame: false,
+    transparent: true,
+    resizable: true,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    backgroundColor: '#00000000',
+    opacity,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+  });
+  miniWindow.loadFile(path.join(__dirname, 'renderer', 'mini.html'));
+
+  let saveMiniBoundsTimer;
+  function scheduleSaveMiniBounds() {
+    clearTimeout(saveMiniBoundsTimer);
+    saveMiniBoundsTimer = setTimeout(() => {
+      const s = loadSettings();
+      s.miniBounds = miniWindow.getBounds();
+      saveSettings(s);
+    }, 400);
+  }
+  miniWindow.on('resize', scheduleSaveMiniBounds);
+  miniWindow.on('move', scheduleSaveMiniBounds);
+  miniWindow.on('closed', () => {
+    miniWindow = null;
+    if (mainWindow && !isQuitting) {
+      mainWindow.show();
+      mainWindow.focus();
+    }
+  });
+}
+
+function enterMiniMode() {
+  createMiniWindow();
+  if (mainWindow) mainWindow.hide();
+}
+
+function exitMiniMode() {
+  if (miniWindow) {
+    miniWindow.close();
+  } else if (mainWindow) {
+    mainWindow.show();
+    mainWindow.focus();
+  }
+}
+
+function createTray() {
+  tray = new Tray(path.join(__dirname, 'build', 'icon.ico'));
+  tray.setToolTip('하루정리');
+  tray.setContextMenu(Menu.buildFromTemplate([
+    { label: '메인 창 열기', click: () => exitMiniMode() },
+    { label: '미니 모드', click: () => enterMiniMode() },
+    { type: 'separator' },
+    { label: '종료', click: () => { isQuitting = true; app.quit(); } },
+  ]));
+  tray.on('click', () => {
+    if (miniWindow) { exitMiniMode(); return; }
+    if (!mainWindow) return;
+    if (mainWindow.isVisible()) mainWindow.hide();
+    else { mainWindow.show(); mainWindow.focus(); }
+  });
 }
 
 ipcMain.handle('load-data', () => loadData());
-ipcMain.handle('save-data', (_e, data) => {
+ipcMain.handle('save-data', (e, data) => {
   saveData(data);
+  BrowserWindow.getAllWindows().forEach((w) => {
+    if (w.webContents.id !== e.sender.id) w.webContents.send('data-changed');
+  });
   return true;
 });
 ipcMain.handle('get-app-version', () => app.getVersion());
@@ -87,6 +189,20 @@ ipcMain.handle('get-settings', () => ({
 ipcMain.handle('set-auto-launch', (_e, enabled) => {
   app.setLoginItemSettings({ openAtLogin: enabled });
   return app.getLoginItemSettings().openAtLogin;
+});
+ipcMain.handle('enter-mini-mode', () => { enterMiniMode(); return true; });
+ipcMain.handle('exit-mini-mode', () => { exitMiniMode(); return true; });
+ipcMain.handle('get-mini-opacity', () => {
+  const s = loadSettings();
+  return typeof s.miniOpacity === 'number' ? s.miniOpacity : 0.92;
+});
+ipcMain.handle('set-mini-opacity', (_e, value) => {
+  const v = Math.min(1, Math.max(0.3, Number(value) || 1));
+  if (miniWindow) miniWindow.setOpacity(v);
+  const s = loadSettings();
+  s.miniOpacity = v;
+  saveSettings(s);
+  return v;
 });
 
 autoUpdater.autoDownload = false;
@@ -116,10 +232,18 @@ ipcMain.handle('check-for-updates', () => {
 });
 ipcMain.handle('download-update', () => autoUpdater.downloadUpdate());
 
+app.on('second-instance', () => {
+  if (miniWindow) exitMiniMode();
+  else if (mainWindow) { mainWindow.show(); mainWindow.focus(); }
+});
+
 app.whenReady().then(() => {
   createWindow();
+  createTray();
   if (app.isPackaged) autoUpdater.checkForUpdates();
 });
+
+app.on('before-quit', () => { isQuitting = true; });
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
