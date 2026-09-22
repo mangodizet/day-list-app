@@ -150,10 +150,17 @@ function render() {
       <button class="check">${t.done ? '✓' : ''}</button>
       <span class="item-text">${escapeHtml(t.text)}</span>
       ${t.carriedFrom ? `<span class="carry-badge">${formatLabel(t.carriedFrom)}에서 이월</span>` : ''}
+      <button class="move-prev" title="이전 날로 이동">‹</button>
       <button class="del" title="삭제">×</button>
     `;
     li.querySelector('.check').onclick = () => { t.done = !t.done; persist(); render(); };
     li.querySelector('.item-text').onclick = () => { t.done = !t.done; persist(); render(); };
+    li.querySelector('.move-prev').onclick = () => {
+      tasks.splice(i, 1);
+      tasksFor(addDays(viewDate, -1)).push(t);
+      persist();
+      render();
+    };
     li.querySelector('.del').onclick = () => { tasks.splice(i, 1); persist(); render(); };
     li.addEventListener('mousedown', (e) => onItemMouseDown(e, li, i, tasks));
 
