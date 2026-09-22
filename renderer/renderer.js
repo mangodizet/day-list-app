@@ -315,7 +315,7 @@ window.api.onUpdateStatus((data) => {
 
   if (data.status === 'available') {
     updateModalTitle.textContent = `새 버전 ${data.version}이 있어요`;
-    updateModalNotes.textContent = data.releaseNotes || '변경 내역이 없어요.';
+    updateModalNotes.innerHTML = data.releaseNotes || '변경 내역이 없어요.';
     updateModalSub.textContent = '지금 업데이트할까요?';
     updateInstallBtn.disabled = false;
     updateModalLayer.classList.add('show');

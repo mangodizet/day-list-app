@@ -236,6 +236,7 @@ body {
   display: none; align-items: center; justify-content: center; padding: 20px; z-index: 10;
 }
 .modal-layer.show { display: flex; }
+#updateModalLayer { z-index: 20; }
 .modal { width: min(340px, 100%); background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px 20px 16px; }
 .modal.wide { width: min(380px, 100%); }
 .modal .icon {
@@ -249,6 +250,7 @@ body {
   max-height: 200px; overflow-y: auto; margin-bottom: 12px; padding: 8px 10px;
   background: var(--surface-sunken); border-radius: 7px;
 }
+.update-notes ul { margin: 0; padding-left: 18px; }
 .rollover-list li { font-size: 13.5px; padding: 6px 8px; background: var(--surface-sunken); border-radius: 7px; }
 .modal p { margin: 0 0 4px; font-size: 14px; line-height: 1.55; }
 .modal .sub { color: var(--text-soft); font-size: 12.5px; margin-bottom: 16px; }
