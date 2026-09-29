@@ -2,6 +2,7 @@ const { app, BrowserWindow, ipcMain, Tray, Menu } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const fs = require('fs');
+const { execFileSync } = require('child_process');
 
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
@@ -164,7 +165,7 @@ function createTray() {
     tray = null;
     return;
   }
-  tray.setToolTip('하루정리');
+  tray.setToolTip('오늘할일');
   tray.setContextMenu(Menu.buildFromTemplate([
     { label: '메인 창 열기', click: () => exitMiniMode() },
     { label: '미니 모드', click: () => enterMiniMode() },
@@ -250,7 +251,22 @@ app.on('second-instance', () => {
   else if (mainWindow) { mainWindow.show(); mainWindow.focus(); }
 });
 
+// 1.1.x에서 앱 이름을 하루정리 → 오늘할일로 바꾸면서 exe 파일명이 달라졌으므로,
+// 옛 exe로 등록된 Windows 자동 실행 항목이 있으면 새 exe로 옮긴다.
+function migrateAutoLaunchFromOldName() {
+  const oldName = 'electron.app.하루정리';
+  const regExe = path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'reg.exe');
+  try {
+    execFileSync(regExe, ['query', 'HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run', '/v', oldName], { stdio: 'ignore' });
+  } catch {
+    return; // 옛 항목 없음
+  }
+  app.setLoginItemSettings({ openAtLogin: false, name: oldName });
+  app.setLoginItemSettings({ openAtLogin: true });
+}
+
 app.whenReady().then(() => {
+  if (app.isPackaged) migrateAutoLaunchFromOldName();
   createWindow();
   createTray();
   if (app.isPackaged) autoUpdater.checkForUpdates();

@@ -16,7 +16,7 @@
   },
   "build": {
     "appId": "com.jaeuk.daylist",
-    "productName": "하루정리",
+    "productName": "오늘할일",
     "files": [
       "main.js",
       "preload.js",
