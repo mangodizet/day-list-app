@@ -19,6 +19,8 @@ function todayKeyForTest() {
 ipcMain.handle('load-data', () => loadData());
 ipcMain.handle('save-data', (_e, data) => { saveData(data); return true; });
 
+ipcMain.handle('get-mini-opacity', () => 0.92);
+ipcMain.handle('get-mini-pinned', () => false);
 ipcMain.handle('get-settings', () => ({ autoLaunch: app.getLoginItemSettings().openAtLogin }));
 ipcMain.handle('set-auto-launch', (_e, enabled) => {
   app.setLoginItemSettings({ openAtLogin: enabled });
@@ -205,6 +207,121 @@ async function run() {
   const savedData = loadData();
   const savedOrder = savedData[Object.keys(savedData)[0]].map(t => t.text).join(',');
   check('변경된 순서가 저장 데이터에도 반영됨', savedOrder === '순서 B,순서 C,순서 A');
+
+  // --- 시나리오 3.7: 장기 일정 + 달력 ---
+  cleanup();
+  writeData({
+    longTerm: [
+      { id: 'l1', text: '마감지난 미완료', start: '2020-01-01', end: '2020-01-05', done: false, doneDate: null },
+      { id: 'l2', text: '마감지난 완료', start: '2020-01-01', end: '2020-01-05', done: true, doneDate: '2020-01-04' },
+      { id: 'l3', text: '먼 미래 일정', start: '2099-01-01', end: '2099-01-10', done: false, doneDate: null },
+    ],
+  });
+  await win.loadFile(target);
+  await sleep(100);
+  let ltText = await wc.executeJavaScript(`document.getElementById('ltList').textContent`);
+  check('기간 지난 미완료 장기 일정은 오늘로 이월되어 표시', ltText.includes('마감지난 미완료') && ltText.includes('일 지남'));
+  check('기간 지난 완료 장기 일정은 오늘 표시 안 됨', !ltText.includes('마감지난 완료'));
+  check('기간 전 장기 일정은 오늘 표시 안 됨', !ltText.includes('먼 미래 일정'));
+  let listTextLt = await wc.executeJavaScript(`document.getElementById('list').textContent`);
+  check('장기 일정은 하루 할 일 목록과 분리', !listTextLt.includes('마감지난'));
+
+  await wc.executeJavaScript(`
+    document.getElementById('datePicker').value = '2020-01-03';
+    document.getElementById('datePicker').dispatchEvent(new Event('change'));
+  `);
+  ltText = await wc.executeJavaScript(`document.getElementById('ltList').textContent`);
+  check('기간 중인 날짜에는 이월 표시 없이 둘 다 표시', ltText.includes('마감지난 미완료') && ltText.includes('마감지난 완료') && !ltText.includes('일 지남'));
+
+  await wc.executeJavaScript(`document.getElementById('todayJumpBtn').click()`);
+  await wc.executeJavaScript(`document.querySelector('#ltList .lt-item .check').click()`);
+  ltText = await wc.executeJavaScript(`document.getElementById('ltList').textContent`);
+  check('이월 중인 장기 일정 완료 체크 시 오늘까지만 남음(완료 표시)', ltText.includes('마감지난 미완료'));
+  check('완료 체크 시 doneDate 오늘로 저장', loadData().longTerm.find(l => l.id === 'l1').doneDate === todayKeyForTest());
+  await wc.executeJavaScript(`
+    document.getElementById('datePicker').value = '2099-12-31';
+    document.getElementById('datePicker').dispatchEvent(new Event('change'));
+  `);
+  ltText = await wc.executeJavaScript(`document.getElementById('ltList').textContent`);
+  check('완료한 뒤로는 더 이상 이월 안 됨', !ltText.includes('마감지난 미완료'));
+
+  await wc.executeJavaScript(`document.getElementById('todayJumpBtn').click()`);
+  await wc.executeJavaScript(`
+    document.getElementById('ltAddBtn').click();
+    document.getElementById('ltText').value = '새 장기 일정';
+    document.getElementById('ltStart').value = '2020-03-10';
+    document.getElementById('ltEnd').value = '2020-03-01';
+    document.getElementById('ltSaveBtn').click();
+  `);
+  let ltErr = await wc.executeJavaScript(`document.getElementById('ltError').textContent`);
+  check('종료일이 시작일보다 빠르면 에러 표시, 저장 안 됨', ltErr.length > 0 && loadData().longTerm.length === 3);
+  const todayT = todayKeyForTest();
+  await wc.executeJavaScript(`
+    document.getElementById('ltStart').value = '${todayT}';
+    document.getElementById('ltEnd').value = '2099-01-01';
+    document.getElementById('ltSaveBtn').click();
+  `);
+  const addedLt = loadData().longTerm.find(l => l.text === '새 장기 일정');
+  check('장기 일정 추가 시 시작/종료일 저장', !!addedLt && addedLt.start === todayT && addedLt.end === '2099-01-01');
+  let ltModalShown = await wc.executeJavaScript(`document.getElementById('ltModalLayer').classList.contains('show')`);
+  check('추가 후 모달 닫힘', !ltModalShown);
+
+  await wc.executeJavaScript(`document.getElementById('calendarBtn').click()`);
+  let calInfo = await wc.executeJavaScript(`({
+    shown: document.getElementById('calModalLayer').classList.contains('show'),
+    cells: document.querySelectorAll('.cal-cell').length,
+    todayChip: document.querySelector('.cal-cell.is-today').textContent,
+  })`);
+  check('달력 아이콘 클릭 시 달력 표시', calInfo.shown && calInfo.cells % 7 === 0 && calInfo.cells >= 28);
+  check('달력 오늘 칸에 장기 일정 표시', calInfo.todayChip.includes('새 장기 일정'));
+  await wc.executeJavaScript(`document.getElementById('calPrevBtn').click(); document.querySelectorAll('.cal-cell:not(.other)')[0].click();`);
+  let afterCal = await wc.executeJavaScript(`({ shown: document.getElementById('calModalLayer').classList.contains('show'), label: document.getElementById('todayLabel').textContent })`);
+  const prevMonth = new Date(); prevMonth.setDate(1); prevMonth.setMonth(prevMonth.getMonth() - 1);
+  check('달력 날짜 클릭 시 해당 날짜로 이동 후 닫힘', !afterCal.shown && afterCal.label === `${prevMonth.getMonth() + 1}월 1일`);
+
+  // --- 시나리오 3.8: 미니 모드 장기 일정 카테고리 + 달력 ---
+  const miniTarget = path.join(__dirname, '..', 'renderer', 'mini.html');
+  cleanup();
+  writeData({ [todayKeyForTest()]: [{ id: 'm1', text: '미니 할 일', done: false }] });
+  await win.loadFile(miniTarget);
+  await sleep(150);
+  let miniCats = await wc.executeJavaScript(`document.querySelectorAll('.mini-cat').length`);
+  check('미니: 오늘 장기 일정 없으면 카테고리 구분 안 함', miniCats === 0);
+
+  writeData({
+    [todayKeyForTest()]: [{ id: 'm1', text: '미니 할 일', done: false }],
+    longTerm: [{ id: 'ml', text: '미니 장기', start: '2020-01-01', end: '2020-01-02', done: false, doneDate: null }],
+  });
+  await win.loadFile(miniTarget);
+  await sleep(150);
+  let miniInfo = await wc.executeJavaScript(`({
+    cats: Array.from(document.querySelectorAll('.mini-cat')).map(e => e.textContent).join(','),
+    lt: document.querySelector('.mini-item.lt') && document.querySelector('.mini-item.lt').textContent,
+  })`);
+  check('미니: 장기 일정 있으면 하루 할 일/장기 일정 카테고리로 분리', miniInfo.cats === '하루 할 일,장기 일정');
+  check('미니: 기간 지난 장기 일정은 이월 표시', !!miniInfo.lt && miniInfo.lt.includes('미니 장기') && miniInfo.lt.includes('일 지남'));
+  await wc.executeJavaScript(`document.querySelector('.mini-item.lt').click()`);
+  await sleep(100);
+  check('미니: 장기 일정 클릭 시 완료 저장', loadData().longTerm[0].done === true);
+
+  await wc.executeJavaScript(`document.getElementById('miniCalBtn').click()`);
+  await sleep(100);
+  let miniCal = await wc.executeJavaScript(`({
+    calShown: getComputedStyle(document.getElementById('miniCal')).display !== 'none',
+    listHidden: getComputedStyle(document.getElementById('miniList')).display === 'none',
+    cells: document.querySelectorAll('.mini-cal-cell').length,
+    day: document.getElementById('miniCalDayList').textContent,
+  })`);
+  check('미니: 달력 아이콘 클릭 시 달력 표시, 목록 숨김', miniCal.calShown && miniCal.listHidden && miniCal.cells >= 28);
+  check('미니: 달력에 선택 날짜(오늘) 일정 표시', miniCal.day.includes('미니 할 일') && miniCal.day.includes('미니 장기'));
+  await wc.executeJavaScript(`document.getElementById('miniCalBtn').click()`);
+  let listBack = await wc.executeJavaScript(`getComputedStyle(document.getElementById('miniList')).display !== 'none'`);
+  check('미니: 달력 아이콘 다시 누르면 목록으로 복귀', listBack);
+
+  cleanup();
+  await win.loadFile(target);
+  let mainCats = await wc.executeJavaScript(`Array.from(document.querySelectorAll('.cat-title')).map(e => e.textContent).join(',')`);
+  check('메인: 하루 할 일/장기 일정 카테고리 표시', mainCats === '하루 할 일,장기 일정');
 
   // --- 시나리오 4: 설정 - Windows 자동 실행 체크박스 ---
   await wc.executeJavaScript(`document.getElementById('settingsBtn').click()`);

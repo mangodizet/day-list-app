@@ -22,6 +22,11 @@
         <button class="history-link" id="todayJumpBtn" style="display:none">오늘로</button>
         <button class="history-link" id="miniModeBtn" title="트레이로 숨기고 미니 요약창 보기">미니 모드</button>
         <span class="app-version" id="appVersion"></span>
+        <button class="icon-btn cal-btn" id="calendarBtn" title="달력 보기" aria-label="달력 보기">
+          <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/>
+          </svg>
+        </button>
         <button class="icon-btn" id="settingsBtn" title="설정">⚙</button>
       </div>
     </div>
@@ -36,7 +41,16 @@
       <button id="addBtn">추가</button>
     </div>
 
+    <div class="cat-title">하루 할 일</div>
     <ul class="list" id="list"></ul>
+
+    <section class="lt-section">
+      <div class="lt-head">
+        <span class="cat-title">장기 일정</span>
+        <button class="lt-add-btn" id="ltAddBtn">+ 장기 일정 추가</button>
+      </div>
+      <ul class="lt-list" id="ltList"></ul>
+    </section>
   </div>
 
   <div class="footer">
@@ -88,6 +102,55 @@
     </div>
   </div>
 
+  <!-- 장기 일정 추가 모달 -->
+  <div class="modal-layer" id="ltModalLayer">
+    <div class="modal">
+      <button class="close-btn" id="ltCloseBtn">×</button>
+      <h2>장기 일정 추가</h2>
+      <label class="field">
+        <span>어떤 일정인가요?</span>
+        <input type="text" id="ltText" maxlength="80" placeholder="예: 포트폴리오 정리" />
+      </label>
+      <div class="field-row">
+        <label class="field">
+          <span>시작일</span>
+          <input type="date" id="ltStart" />
+        </label>
+        <label class="field">
+          <span>종료일</span>
+          <input type="date" id="ltEnd" />
+        </label>
+      </div>
+      <div class="field-error" id="ltError"></div>
+      <div class="modal-actions">
+        <button id="ltCancelBtn">취소</button>
+        <button class="primary" id="ltSaveBtn">추가</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 달력 모달 -->
+  <div class="modal-layer" id="calModalLayer">
+    <div class="modal cal-modal">
+      <button class="close-btn" id="calCloseBtn">×</button>
+      <div class="cal-head">
+        <button class="nav-arrow" id="calPrevBtn" aria-label="이전 달">‹</button>
+        <h2 id="calTitle"></h2>
+        <button class="nav-arrow" id="calNextBtn" aria-label="다음 달">›</button>
+      </div>
+      <div class="cal-grid cal-dow">
+        <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+      </div>
+      <div class="cal-grid" id="calGrid"></div>
+      <div class="cal-legend">
+        <span><i class="lg lg-lt"></i>장기 일정</span>
+        <span><i class="lg lg-over"></i>기간 지나 이월 중</span>
+        <span><b>2/3</b> 하루 할 일 완료</span>
+      </div>
+    </div>
+  </div>
+
+  <script src="shared.js"></script>
   <script src="renderer.js"></script>
 </body>
 </html>

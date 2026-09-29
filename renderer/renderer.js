@@ -2,18 +2,6 @@ let data = {};
 let today = todayKey();
 let viewDate = today;
 
-function todayKey(d = new Date()) {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
-
-function addDays(dateKey, n) {
-  const [y, m, d] = dateKey.split('-').map(Number);
-  return todayKey(new Date(y, m - 1, d + n));
-}
-
 function formatLabel(dateKey) {
   const [, m, d] = dateKey.split('-').map(Number);
   return `${m}월 ${d}일`;
@@ -182,12 +170,8 @@ function render() {
   progressFill.style.width = tasks.length ? `${(done / tasks.length) * 100}%` : '0%';
   footerHint.textContent = pending > 0 ? `미완료 ${pending}개` : '미완료 항목이 없어요';
   carryBtn.disabled = pending === 0;
-}
-
-function escapeHtml(s) {
-  const div = document.createElement('div');
-  div.textContent = s;
-  return div.innerHTML;
+  renderLongTerms();
+  if (calModalLayer.classList.contains('show')) renderCalendar();
 }
 
 addBtn.onclick = addTask;
@@ -200,6 +184,144 @@ function addTask() {
   persist();
   render();
 }
+
+// --- 장기 일정 ---
+const ltList = document.getElementById('ltList');
+const ltModalLayer = document.getElementById('ltModalLayer');
+const ltText = document.getElementById('ltText');
+const ltStart = document.getElementById('ltStart');
+const ltEnd = document.getElementById('ltEnd');
+const ltError = document.getElementById('ltError');
+
+function longTerms() {
+  return Array.isArray(data.longTerm) ? data.longTerm : [];
+}
+
+function renderLongTerms() {
+  const items = longTermsOn(data, viewDate, today);
+  ltList.innerHTML = '';
+  if (items.length === 0) {
+    ltList.innerHTML = '<li class="lt-empty">이 날짜에 걸친 장기 일정이 없어요</li>';
+    return;
+  }
+  items.forEach(lt => {
+    const overDays = daysBetween(lt.end, viewDate);
+    const li = document.createElement('li');
+    li.className = 'lt-item' + (lt.done ? ' done' : '') + (overDays > 0 ? ' over' : '');
+    li.innerHTML = `
+      <button class="check">${lt.done ? '✓' : ''}</button>
+      <div class="lt-body">
+        <span class="lt-text">${escapeHtml(lt.text)}</span>
+        <span class="lt-range">${formatShort(lt.start)} ~ ${formatShort(lt.end)}</span>
+      </div>
+      ${overDays > 0 ? `<span class="carry-badge">마감 ${overDays}일 지남</span>` : ''}
+      <button class="del" title="삭제">×</button>
+    `;
+    const toggle = () => {
+      lt.done = !lt.done;
+      lt.doneDate = lt.done ? today : null;
+      persist();
+      render();
+    };
+    li.querySelector('.check').onclick = toggle;
+    li.querySelector('.lt-text').onclick = toggle;
+    li.querySelector('.del').onclick = () => {
+      data.longTerm = longTerms().filter(x => x !== lt);
+      persist();
+      render();
+    };
+    ltList.appendChild(li);
+  });
+}
+
+function openLongTermModal() {
+  ltText.value = '';
+  ltStart.value = viewDate;
+  ltEnd.value = addDays(viewDate, 6);
+  ltError.textContent = '';
+  ltModalLayer.classList.add('show');
+  ltText.focus();
+}
+
+function saveLongTerm() {
+  const text = ltText.value.trim();
+  const start = ltStart.value;
+  const end = ltEnd.value;
+  if (!text) { ltError.textContent = '일정 내용을 적어주세요'; ltText.focus(); return; }
+  if (!start || !end) { ltError.textContent = '시작일과 종료일을 모두 골라주세요'; return; }
+  if (end < start) { ltError.textContent = '종료일이 시작일보다 빨라요'; return; }
+  data.longTerm = [...longTerms(), { id: crypto.randomUUID(), text, start, end, done: false, doneDate: null }];
+  ltModalLayer.classList.remove('show');
+  persist();
+  render();
+}
+
+document.getElementById('ltAddBtn').onclick = openLongTermModal;
+document.getElementById('ltCloseBtn').onclick = () => ltModalLayer.classList.remove('show');
+document.getElementById('ltCancelBtn').onclick = () => ltModalLayer.classList.remove('show');
+document.getElementById('ltSaveBtn').onclick = saveLongTerm;
+ltText.addEventListener('keydown', e => { if (e.key === 'Enter') saveLongTerm(); });
+ltStart.onchange = () => { if (ltEnd.value && ltEnd.value < ltStart.value) ltEnd.value = ltStart.value; };
+
+// --- 달력 ---
+const calModalLayer = document.getElementById('calModalLayer');
+const calGrid = document.getElementById('calGrid');
+const calTitle = document.getElementById('calTitle');
+let calMonth = today.slice(0, 7);
+
+function renderCalendar() {
+  const [y, m] = calMonth.split('-').map(Number);
+  calTitle.textContent = `${y}년 ${m}월`;
+  const firstDow = new Date(y, m - 1, 1).getDay();
+  const cellCount = Math.ceil((firstDow + new Date(y, m, 0).getDate()) / 7) * 7;
+  const startKey = todayKey(new Date(y, m - 1, 1 - firstDow));
+
+  calGrid.innerHTML = '';
+  for (let i = 0; i < cellCount; i++) {
+    const key = addDays(startKey, i);
+    const cellMonth = Number(key.slice(5, 7));
+    const lts = longTermsOn(data, key, today);
+    const tasks = data[key] || [];
+    const cell = document.createElement('button');
+    cell.className = 'cal-cell'
+      + (cellMonth !== m ? ' other' : '')
+      + (key === today ? ' is-today' : '')
+      + (key === viewDate ? ' is-view' : '')
+      + (i % 7 === 0 ? ' sun' : '');
+    const chips = lts.slice(0, 2).map(lt =>
+      `<span class="cal-chip${key > lt.end ? ' over' : ''}${lt.done ? ' done' : ''}">${escapeHtml(lt.text)}</span>`
+    ).join('');
+    cell.innerHTML = `
+      <span class="cal-day">${Number(key.slice(8))}</span>
+      ${chips}
+      ${lts.length > 2 ? `<span class="cal-more">+${lts.length - 2}</span>` : ''}
+      ${tasks.length ? `<span class="cal-tasks">${tasks.filter(t => t.done).length}/${tasks.length}</span>` : ''}
+    `;
+    cell.title = [...lts.map(lt => `[장기] ${lt.text}`), ...tasks.map(t => `${t.done ? '✓' : '·'} ${t.text}`)].join('\n');
+    cell.onclick = () => {
+      viewDate = key;
+      calModalLayer.classList.remove('show');
+      render();
+    };
+    calGrid.appendChild(cell);
+  }
+}
+
+function shiftCalMonth(n) {
+  const [y, m] = calMonth.split('-').map(Number);
+  calMonth = todayKey(new Date(y, m - 1 + n, 1)).slice(0, 7);
+  renderCalendar();
+}
+
+document.getElementById('calendarBtn').onclick = () => {
+  calMonth = viewDate.slice(0, 7);
+  renderCalendar();
+  calModalLayer.classList.add('show');
+};
+document.getElementById('calCloseBtn').onclick = () => calModalLayer.classList.remove('show');
+document.getElementById('calPrevBtn').onclick = () => shiftCalMonth(-1);
+document.getElementById('calNextBtn').onclick = () => shiftCalMonth(1);
+calModalLayer.addEventListener('click', e => { if (e.target === calModalLayer) calModalLayer.classList.remove('show'); });
 
 function carryOverTo(fromDate, toDate) {
   const list = tasksFor(fromDate);
