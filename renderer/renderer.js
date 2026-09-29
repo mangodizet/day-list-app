@@ -13,7 +13,10 @@ function tasksFor(dateKey) {
 }
 
 function persist() {
-  window.api.saveData(data);
+  window.api.saveData(data).catch((err) => {
+    console.error('저장 실패:', err);
+    footerHint.textContent = '저장에 실패했어요. 디스크 공간이나 권한을 확인해주세요';
+  });
 }
 
 const todayLabel = document.getElementById('todayLabel');

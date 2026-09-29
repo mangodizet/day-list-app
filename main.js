@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, Tray, Menu } = require('electron');
+const { app, BrowserWindow, ipcMain, Tray, Menu, screen, shell } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const fs = require('fs');
@@ -11,18 +11,47 @@ if (!gotLock) {
 }
 
 const dataPath = path.join(app.getPath('userData'), 'data.json');
+const backupPath = path.join(app.getPath('userData'), 'data.bak.json');
 const settingsPath = path.join(app.getPath('userData'), 'settings.json');
 
+// 저장 도중 전원이 꺼져도 파일이 반쯤 쓰인 채로 남지 않도록 임시 파일에 쓴 뒤 교체한다.
+function writeJsonAtomic(file, obj) {
+  const json = JSON.stringify(obj, null, 2);
+  const tmp = `${file}.tmp`;
+  fs.writeFileSync(tmp, json, 'utf-8');
+  try {
+    fs.renameSync(tmp, file);
+  } catch {
+    // 백신 등이 파일을 잡고 있어 교체가 막히면 직접 쓴다
+    fs.writeFileSync(file, json, 'utf-8');
+    fs.rmSync(tmp, { force: true });
+  }
+}
+
 function loadData() {
+  if (!fs.existsSync(dataPath)) return {};
   try {
     return JSON.parse(fs.readFileSync(dataPath, 'utf-8'));
-  } catch {
-    return {};
+  } catch (err) {
+    // 깨진 파일은 덮어쓰기 전에 따로 보관하고, 마지막 정상 백업으로 복구한다
+    console.error('data.json 읽기 실패, 백업으로 복구합니다:', err);
+    fs.copyFileSync(dataPath, path.join(app.getPath('userData'), `data.corrupt-${Date.now()}.json`));
+    let recovered = {};
+    try { recovered = JSON.parse(fs.readFileSync(backupPath, 'utf-8')); } catch {}
+    writeJsonAtomic(dataPath, recovered);
+    return recovered;
   }
 }
 
 function saveData(data) {
-  fs.writeFileSync(dataPath, JSON.stringify(data, null, 2), 'utf-8');
+  // 날짜만 열어봐서 생긴 빈 목록은 저장하지 않는다 (파일이 계속 불어나는 것 방지)
+  const clean = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (Array.isArray(value) && value.length === 0 && key !== 'longTerm') continue;
+    clean[key] = value;
+  }
+  if (fs.existsSync(dataPath)) fs.copyFileSync(dataPath, backupPath);
+  writeJsonAtomic(dataPath, clean);
 }
 
 function loadSettings() {
@@ -34,7 +63,23 @@ function loadSettings() {
 }
 
 function saveSettings(settings) {
-  fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf-8');
+  writeJsonAtomic(settingsPath, settings);
+}
+
+// 저장된 창 위치가 지금 연결된 모니터 밖이면(보조 모니터 분리 등) 버리고 기본 위치를 쓴다.
+function visibleBounds(bounds) {
+  if (!bounds) return null;
+  const onScreen = screen.getAllDisplays().some(({ workArea: a }) =>
+    bounds.x < a.x + a.width - 40 && bounds.x + bounds.width > a.x + 40
+    && bounds.y >= a.y - 10 && bounds.y < a.y + a.height - 40);
+  return onScreen ? bounds : null;
+}
+
+// 업데이트 안내문 링크 등을 눌러도 앱 창이 외부 페이지로 바뀌지 않게 막고 기본 브라우저로 연다.
+function lockNavigation(win) {
+  const openExternal = (url) => { if (/^https?:\/\//.test(url)) shell.openExternal(url); };
+  win.webContents.setWindowOpenHandler(({ url }) => { openExternal(url); return { action: 'deny' }; });
+  win.webContents.on('will-navigate', (e, url) => { e.preventDefault(); openExternal(url); });
 }
 
 let mainWindow;
@@ -44,7 +89,7 @@ let isQuitting = false;
 
 function createWindow() {
   const settings = loadSettings();
-  const bounds = settings.bounds;
+  const bounds = visibleBounds(settings.bounds);
 
   mainWindow = new BrowserWindow({
     width: bounds ? bounds.width : 420,
@@ -70,6 +115,7 @@ function createWindow() {
     },
   });
 
+  lockNavigation(mainWindow);
   mainWindow.loadFile(path.join(__dirname, 'renderer', 'index.html'));
 
   let saveBoundsTimer;
@@ -99,7 +145,7 @@ function createMiniWindow() {
     return;
   }
   const settings = loadSettings();
-  const bounds = settings.miniBounds;
+  const bounds = visibleBounds(settings.miniBounds);
   const pinned = !!settings.miniPinned;
 
   miniWindow = new BrowserWindow({
@@ -121,6 +167,7 @@ function createMiniWindow() {
       nodeIntegration: false,
     },
   });
+  lockNavigation(miniWindow);
   miniWindow.loadFile(path.join(__dirname, 'renderer', 'mini.html'));
 
   let saveMiniBoundsTimer;
@@ -242,9 +289,9 @@ ipcMain.handle('check-for-updates', () => {
     sendUpdateStatus('dev-mode');
     return;
   }
-  autoUpdater.checkForUpdates();
+  autoUpdater.checkForUpdates().catch(() => {}); // 실패는 'error' 이벤트로 화면에 표시됨
 });
-ipcMain.handle('download-update', () => autoUpdater.downloadUpdate());
+ipcMain.handle('download-update', () => autoUpdater.downloadUpdate().catch(() => {}));
 
 app.on('second-instance', () => {
   if (miniWindow) exitMiniMode();
@@ -269,7 +316,7 @@ app.whenReady().then(() => {
   if (app.isPackaged) migrateAutoLaunchFromOldName();
   createWindow();
   createTray();
-  if (app.isPackaged) autoUpdater.checkForUpdates();
+  if (app.isPackaged) autoUpdater.checkForUpdates().catch(() => {}); // 실패는 'error' 이벤트로 화면에 표시됨
 });
 
 app.on('before-quit', () => { isQuitting = true; });

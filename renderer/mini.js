@@ -1,5 +1,4 @@
-const today = todayKey();
-const [, todayM, todayD] = today.split('-').map(Number);
+let today = todayKey();
 
 const dateLabel = document.getElementById('miniDateLabel');
 const listEl = document.getElementById('miniList');
@@ -9,7 +8,20 @@ const pinBtn = document.getElementById('miniPinBtn');
 const opacityRange = document.getElementById('miniOpacityRange');
 const opacityValue = document.getElementById('miniOpacityValue');
 
-dateLabel.textContent = `${todayM}월 ${todayD}일 할 일`;
+function renderDateLabel() {
+  const [, m, d] = today.split('-').map(Number);
+  dateLabel.textContent = `${m}월 ${d}일 할 일`;
+}
+renderDateLabel();
+
+// 미니 창을 켜둔 채 자정이 지나면 오늘 날짜로 넘어간다
+setInterval(() => {
+  const nowKey = todayKey();
+  if (nowKey === today) return;
+  today = nowKey;
+  renderDateLabel();
+  render();
+}, 30000);
 
 async function toggleDone(taskId) {
   const fresh = await window.api.loadData();
