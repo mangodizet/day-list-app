@@ -207,6 +207,9 @@ body {
   cursor: pointer; display: flex; align-items: center; justify-content: center;
   background: transparent; color: var(--surface); font-size: 12px;
 }
+/* 박스 바깥 여백까지 클릭 영역으로 잡아서 근처를 눌러도 드래그 대신 체크가 우선되게 함 */
+.item .check { position: relative; }
+.item .check::before { content: ''; position: absolute; inset: -9px -9px; }
 .item.done .check { background: var(--accent); border-color: var(--accent); }
 .item-text { flex: 1; font-size: 14px; cursor: pointer; word-break: break-word; }
 .item.done .item-text { color: var(--text-faint); text-decoration: line-through; text-decoration-color: var(--text-faint); }
